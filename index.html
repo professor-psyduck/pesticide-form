@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>NJ Pesticide Application Record</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1F3864;
+    --navy-light: #2a4a82;
+    --steel: #AEC6CF;
+    --ice: #D6E4F0;
+    --ice-dim: #eaf3f9;
+    --white: #ffffff;
+    --ink: #1a1a2e;
+    --muted: #6b7a99;
+    --border: #c8d8e8;
+    --success: #2d7d46;
+    --warn: #b45309;
+    --radius: 10px;
+    --shadow: 0 2px 12px rgba(31,56,100,0.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #f0f5fb;
+    color: var(--ink);
+    min-height: 100vh;
+    padding-bottom: 120px;
+  }
+
+  /* —— Header —— */
+  .app-header {
+    background: var(--navy);
+    color: white;
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 3px 16px rgba(31,56,100,0.25);
+  }
+  .header-top {
+    padding: 14px 16px 10px;
+  }
+  .header-top h1 {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+  .header-top p {
+    font-size: 11px;
+    opacity: 0.7;
+    margin-top: 2px;
+    font-family: 'DM Mono', monospace;
+  }
+  .progress-bar-wrap {
+    height: 4px;
+    background: rgba(255,255,255,0.15);
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--steel);
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* —— Step nav —— */
+  .step-nav {
+    display: flex;
+    overflow-x: auto;
+    gap: 0;
+    background: #162b52;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .step-nav::-webkit-scrollbar { display: none; }
+  .step-btn {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.5);
+    background: none;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .step-btn.active {
+    color: white;
+    border-bottom-color: var(--steel);
+  }
+  .step-btn.done {
+    color: var(--steel);
+  }
+
+  /* —— Main —— */
+  .main { padding: 16px; max-width: 600px; margin: 0 auto; }
+
+  /* —— Section card —— */
+  .section-card {
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+    overflow: hidden;
+    display: none;
+  }
+  .section-card.active { display: block; }
+
+  .section-title {
+    background: var(--navy);
+    color: white;
+    padding: 11px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title .num {
+    background: rgba(255,255,255,0.18);
+    border-radius: 50%;
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    flex-shrink: 0;
+  }
+  .section-body { padding: 14px 14px 6px; }
+
+  /* —— Field —— */
+  .field {
+    margin-bottom: 12px;
+  }
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 5px;
+    letter-spacing: 0.02em;
+  }
+  .field label .req { color: #c0392b; margin-left: 2px; }
+
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 12px;
+    font-size: 15px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink);
+    background: var(--ice-dim);
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: var(--navy);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(31,56,100,0.10);
+  }
+  .field input.filled,
+  .field select.filled,
+  .field textarea.filled {
+    border-color: var(--steel);
+    background: white;
+  }
+  .field textarea { resize: vertical; min-height: 72px; }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%231F3864' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .field-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  .field-hint {
+    font-size: 10.5px;
+    color: var(--muted);
+    margin-top: 4px;
+    font-style: italic;
+  }
+
+  /* —— Pesticide rows —— */
+  .pesticide-item {
+    background: var(--ice-dim);
+    border: 1.5px solid var(--ice);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .pesticide-item-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.7;
+  }
+
+  /* —— Cert block —— */
+  .cert-text {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+    background: var(--ice-dim);
+    border-left: 3px solid var(--steel);
+    padding: 10px 12px;
+    border-radius: 0 7px 7px 0;
+    margin-bottom: 14px;
+  }
+
+  /* —— Bottom bar —— */
+  .bottom-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: white;
+    border-top: 1.5px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    gap: 10px;
+    max-width: 600px;
+    margin: 0 auto;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    box-shadow: 0 -4px 20px rgba(31,56,100,0.10);
+  }
+
+  .btn {
+    flex: 1;
+    padding: 13px 10px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    border: none;
+    cursor: pointer;
+    transition: all 0.18s;
+    letter-spacing: 0.01em;
+  }
+  .btn-outline {
+    background: var(--ice-dim);
+    color: var(--navy);
+    border: 1.5px solid var(--border);
+  }
+  .btn-outline:active { background: var(--ice); }
+
+  .btn-primary {
+    background: var(--navy);
+    color: white;
+    box-shadow: 0 3px 10px rgba(31,56,100,0.25);
+  }
+  .btn-primary:active { background: var(--navy-light); transform: scale(0.98); }
+
+  .btn-success {
+    background: var(--success);
+    color: white;
+    box-shadow: 0 3px 10px rgba(45,125,70,0.25);
+  }
+  .btn-success:active { transform: scale(0.98); }
+
+  /* —— Toast —— */
+  .toast {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: var(--ink);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* —— Review panel —— */
+  .review-group { margin-bottom: 14px; }
+  .review-group-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--ice);
+  }
+  .review-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid #f3f6fa;
+  }
+  .review-row:last-child { border-bottom: none; }
+  .review-label {
+    font-size: 11px;
+    color: var(--muted);
+    flex: 0 0 44%;
+  }
+  .review-value {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink);
+    text-align: right;
+    flex: 1;
+  }
+  .review-empty { color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-top">
+    <h1>Pesticide Application Record</h1>
+    <p>NJ Commercial Applicator · Category 7A</p>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar"></div></div>
+  <nav class="step-nav" id="stepNav"></nav>
+</header>
+
+<div class="toast" id="toast"></div>
+
+<main class="main" id="mainContent"></main>
+
+<div class="bottom-bar" id="bottomBar"></div>
+
+<script>
+const STEPS = [
+  {
+    id: 'applicator', label: 'Applicator', title: 'Applicator Information',
+    fields: [
+      { id: 'business_name', label: 'Business / Company Name', type: 'text', req: true, placeholder: 'ABC Pest Control LLC' },
+      { id: 'license_number', label: 'NJ Pesticide Applicator License #', type: 'text', req: true, placeholder: 'e.g. 9500000' },
+      { id: 'applicator_name', label: 'Applicator Full Name', type: 'text', req: true, placeholder: 'Full name of person making application' },
+      { id: 'applicator_license', label: 'Applicator License # (if different)', type: 'text', placeholder: 'Leave blank if same as above' },
+      { id: 'operator_name', label: 'Operator / Handler Full Name (if applicable)', type: 'text', placeholder: 'Only if application made by handler' },
+      { id: 'handler_card', label: 'Handler Card Number', type: 'text', placeholder: 'Handler card #' },
+    ]
+  },
+  {
+    id: 'site', label: 'Site', title: 'Application Site',
+    fields: [
+      { id: 'site_name', label: 'Customer / Site Name', type: 'text', req: true, placeholder: 'Customer name or site name' },
+      { id: 'site_address', label: 'Site Address', type: 'text', req: true, placeholder: 'Street, City, State, Zip' },
+      { id: 'site_type', label: 'Type of Site', type: 'select', req: true,
+        options: ['', 'Residential', 'Commercial', 'Industrial', 'Institutional', 'Food Service / Restaurant', 'Retail', 'Other'] },
+      { id: 'target_area', label: 'Target Area / Location at Site', type: 'text', placeholder: 'e.g., kitchen, perimeter, attic, basement' },
+    ]
+  },
+  {
+    id: 'datetime', label: 'Date & Time', title: 'Application Date & Time',
+    fields: [
+      { id: 'app_date', label: 'Date of Application', type: 'date', req: true },
+      { id: 'app_time', label: 'Time Application Completed', type: 'time', hint: 'Required if pesticide label specifies an REI' },
+      { id: 'rei_end', label: 'REI End Date / Time', type: 'datetime-local', hint: 'Required if pesticide label specifies a Re-Entry Interval' },
+    ]
+  },
+  {
+    id: 'pesticides', label: 'Pesticides', title: 'Pesticide(s) Used', special: 'pesticides'
+  },
+  {
+    id: 'method', label: 'Method', title: 'Application Method & Equipment',
+    fields: [
+      { id: 'app_method', label: 'Application Method', type: 'select',
+        options: ['', 'Spray', 'Bait', 'Dust', 'Gel', 'Granular', 'Crack & Crevice', 'Void Treatment', 'Exterior Perimeter', 'Other'] },
+      { id: 'equipment', label: 'Equipment Used', type: 'text', placeholder: 'e.g., B&G sprayer, hand duster, bait gun' },
+      { id: 'mix_volume', label: 'Total Mix Volume Prepared', type: 'text', placeholder: 'e.g., 2 gallons' },
+    ]
+  },
+  {
+    id: 'pest', label: 'Pest', title: 'Target Pest(s)',
+    fields: [
+      { id: 'target_pests', label: 'Target Pest(s)', type: 'text', req: true, placeholder: 'e.g., cockroaches, ants, mice' },
+      { id: 'infestation_level', label: 'Severity / Level of Infestation', type: 'select',
+        options: ['', 'Light', 'Moderate', 'Heavy', 'Unknown'] },
+    ]
+  },
+  {
+    id: 'conditions', label: 'Conditions', title: 'Conditions at Time of Application',
+    fields: [
+      { id: 'temperature', label: 'Temperature (°F)', type: 'number', placeholder: '72' },
+      { id: 'wind', label: 'Wind Speed / Direction', type: 'text', placeholder: 'e.g., 5 mph NW' },
+      { id: 'weather', label: 'Weather Conditions', type: 'select',
+        options: ['', 'Clear / Sunny', 'Partly Cloudy', 'Overcast', 'Light Rain', 'Windy', 'Indoor – N/A'] },
+      { id: 'indoor_outdoor', label: 'Indoor / Outdoor', type: 'select',
+        options: ['', 'Indoor', 'Outdoor', 'Both'] },
+    ]
+  },
+  {
+    id: 'notifications', label: 'Notices', title: 'Notifications & Special Conditions',
+    fields: [
+      { id: 'customer_notified', label: 'Customer notified prior to application?', type: 'select',
+        options: ['', 'Yes', 'No'] },
+      { id: 'notification_method', label: 'Notification Method & Date', type: 'text', placeholder: 'e.g., Phone call on 03/18/2026' },
+      { id: 'signage_placed', label: 'Posting / Signage placed?', type: 'select', options: ['', 'Yes', 'No', 'N/A'] },
+      { id: 'posting_location', label: 'Posting Location', type: 'text', placeholder: 'e.g., front door, treated areas' },
+      { id: 'special_notes', label: 'Special conditions, sensitivities, or notes', type: 'textarea',
+        placeholder: 'e.g., dog on premises, well within 100ft, pond nearby, customer allergic to...' },
+    ]
+  },
+  {
+    id: 'certification', label: 'Certify', title: 'Certification & Generate PDF', special: 'certification'
+  },
+];
+
+const PESTICIDE_FIELDS = [
+  { id: 'brand', label: 'Brand / Trade Name', placeholder: 'Product name on label' },
+  { id: 'ai', label: 'Active Ingredient(s)', placeholder: 'e.g., Bifenthrin 7.9%' },
+  { id: 'epa', label: 'EPA Reg. Number', placeholder: 'XXXXX-XXXX' },
+  { id: 'mix', label: 'Mix Rate / Recipe (per label)', placeholder: 'e.g., 1oz per gallon' },
+  { id: 'amt', label: 'Total Amount Used', placeholder: 'e.g., 1.5 gallons' },
+];
+
+let formData = {};
+let currentStep = 0;
+
+// —— Helpers ————————————————————————————————————————————————————————
+function get(id) { return formData[id] || ''; }
+function set(id, val) { formData[id] = val; updateProgress(); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+function updateProgress() {
+  const total = STEPS.length;
+  const pct = Math.round(((currentStep + 1) / total) * 100);
+  document.getElementById('progressBar').style.width = pct + '%';
+
+  document.querySelectorAll('.step-btn').forEach((btn, i) => {
+    btn.classList.remove('active', 'done');
+    if (i === currentStep) btn.classList.add('active');
+    else if (i < currentStep) btn.classList.add('done');
+  });
+
+  // scroll active nav button into view
+  const activeBtn = document.querySelector('.step-btn.active');
+  if (activeBtn) activeBtn.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
+}
+
+// —— Build UI ————————————————————————————————————————————————————————
+function buildNav() {
+  const nav = document.getElementById('stepNav');
+  STEPS.forEach((step, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'step-btn';
+    btn.textContent = step.label;
+    btn.onclick = () => goTo(i);
+    nav.appendChild(btn);
+  });
+}
+
+function buildAllSections() {
+  const main = document.getElementById('mainContent');
+  STEPS.forEach((step, i) => {
+    const card = document.createElement('div');
+    card.className = 'section-card' + (i === 0 ? ' active' : '');
+    card.id = 'step-' + step.id;
+
+    const title = document.createElement('div');
+    title.className = 'section-title';
+    title.innerHTML = `<span class="num">${i + 1}</span> ${step.title}`;
+    card.appendChild(title);
+
+    const body = document.createElement('div');
+    body.className = 'section-body';
+
+    if (step.special === 'pesticides') {
+      body.appendChild(buildPesticideSection());
+    } else if (step.special === 'certification') {
+      body.appendChild(buildCertSection());
+    } else {
+      step.fields.forEach(f => body.appendChild(buildField(f)));
+    }
+
+    card.appendChild(body);
+    main.appendChild(card);
+  });
+}
+
+function buildField(f) {
+  const wrap = document.createElement('div');
+  wrap.className = 'field';
+
+  const label = document.createElement('label');
+  label.htmlFor = f.id;
+  label.innerHTML = f.label + (f.req ? '<span class="req">*</span>' : '');
+  wrap.appendChild(label);
+
+  let input;
+  if (f.type === 'select') {
+    input = document.createElement('select');
+    f.options.forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt; o.textContent = opt || '— Select —';
+      input.appendChild(o);
+    });
+  } else if (f.type === 'textarea') {
+    input = document.createElement('textarea');
+    if (f.placeholder) input.placeholder = f.placeholder;
+  } else {
+    input = document.createElement('input');
+    input.type = f.type;
+    if (f.placeholder) input.placeholder = f.placeholder;
+  }
+
+  input.id = f.id;
+  input.name = f.id;
+  if (get(f.id)) { input.value = get(f.id); input.classList.add('filled'); }
+
+  input.addEventListener('input', () => {
+    set(f.id, input.value);
+    input.classList.toggle('filled', !!input.value);
+  });
+  input.addEventListener('change', () => {
+    set(f.id, input.value);
+    input.classList.toggle('filled', !!input.value);
+  });
+
+  wrap.appendChild(input);
+
+  if (f.hint) {
+    const hint = document.createElement('p');
+    hint.className = 'field-hint';
+    hint.textContent = f.hint;
+    wrap.appendChild(hint);
+  }
+
+  return wrap;
+}
+
+function buildPesticideSection() {
+  const wrap = document.createElement('div');
+
+  for (let row = 1; row <= 3; row++) {
+    const item = document.createElement('div');
+    item.className = 'pesticide-item';
+    const title = document.createElement('div');
+    title.className = 'pesticide-item-title';
+    title.textContent = `Product ${row}${row === 1 ? ' (required if used)' : ' (optional)'}`;
+    item.appendChild(title);
+
+    PESTICIDE_FIELDS.forEach(pf => {
+      const fid = `p${row}_${pf.id}`;
+      const f = { id: fid, label: pf.label, type: 'text', placeholder: pf.placeholder };
+      item.appendChild(buildField(f));
+    });
+
+    wrap.appendChild(item);
+  }
+  return wrap;
+}
+
+function buildCertSection() {
+  const wrap = document.createElement('div');
+
+  const cert = document.createElement('p');
+  cert.className = 'cert-text';
+  cert.textContent = 'I certify that the above information is accurate and that this application was made in compliance with N.J.A.C. 7:30 and all applicable pesticide label requirements.';
+  wrap.appendChild(cert);
+
+  const fields = [
+    { id: 'date_signed', label: 'Date Signed', type: 'date', req: true },
+  ];
+  fields.forEach(f => wrap.appendChild(buildField(f)));
+
+  // Review summary
+  const reviewTitle = document.createElement('div');
+  reviewTitle.className = 'review-group-title';
+  reviewTitle.style.marginTop = '14px';
+  reviewTitle.textContent = 'Form Summary';
+  wrap.appendChild(reviewTitle);
+
+  const reviewWrap = document.createElement('div');
+  reviewWrap.id = 'reviewSummary';
+  wrap.appendChild(reviewWrap);
+
+  return wrap;
+}
+
+function buildReview() {
+  const wrap = document.getElementById('reviewSummary');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+
+  const groups = [
+    { title: 'Applicator', keys: ['business_name','license_number','applicator_name','applicator_license'] },
+    { title: 'Site', keys: ['site_name','site_address','site_type','target_area'] },
+    { title: 'Date & Time', keys: ['app_date','app_time','rei_end'] },
+    { title: 'Pesticide 1', keys: ['p1_brand','p1_ai','p1_epa','p1_mix','p1_amt'] },
+    { title: 'Method', keys: ['app_method','equipment','mix_volume'] },
+    { title: 'Pest', keys: ['target_pests','infestation_level'] },
+    { title: 'Conditions', keys: ['temperature','wind','weather','indoor_outdoor'] },
+    { title: 'Notifications', keys: ['customer_notified','notification_method','signage_placed','posting_location','special_notes'] },
+  ];
+
+  const labelMap = {};
+  STEPS.forEach(s => {
+    if (s.fields) s.fields.forEach(f => labelMap[f.id] = f.label);
+  });
+  PESTICIDE_FIELDS.forEach(pf => {
+    for (let r=1;r<=3;r++) labelMap[`p${r}_${pf.id}`] = pf.label;
+  });
+
+  groups.forEach(g => {
+    const hasAny = g.keys.some(k => get(k));
+    if (!hasAny) return;
+
+    const grp = document.createElement('div');
+    grp.className = 'review-group';
+    const gt = document.createElement('div');
+    gt.className = 'review-group-title';
+    gt.textContent = g.title;
+    grp.appendChild(gt);
+
+    g.keys.forEach(k => {
+      const val = get(k);
+      if (!val) return;
+      const row = document.createElement('div');
+      row.className = 'review-row';
+      row.innerHTML = `<span class="review-label">${labelMap[k] || k}</span><span class="review-value">${val}</span>`;
+      grp.appendChild(row);
+    });
+
+    wrap.appendChild(grp);
+  });
+}
+
+// —— Navigation ————————————————————————————————————————————————————————
+function goTo(i) {
+  if (i === STEPS.length - 1) buildReview();
+  document.querySelectorAll('.section-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('step-' + STEPS[i].id).classList.add('active');
+  currentStep = i;
+  updateProgress();
+  buildBottomBar();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function buildBottomBar() {
+  const bar = document.getElementById('bottomBar');
+  bar.innerHTML = '';
+
+  if (currentStep > 0) {
+    const back = document.createElement('button');
+    back.className = 'btn btn-outline';
+    back.textContent = '← Back';
+    back.onclick = () => goTo(currentStep - 1);
+    bar.appendChild(back);
+  }
+
+  if (currentStep < STEPS.length - 1) {
+    const next = document.createElement('button');
+    next.className = 'btn btn-primary';
+    next.textContent = 'Next →';
+    next.onclick = () => goTo(currentStep + 1);
+    bar.appendChild(next);
+  } else {
+    const dl = document.createElement('button');
+    dl.className = 'btn btn-success';
+    dl.textContent = '⬇ Download PDF';
+    dl.onclick = generatePDF;
+    bar.appendChild(dl);
+
+    const print = document.createElement('button');
+    print.className = 'btn btn-primary';
+    print.textContent = '🖨 Print';
+    print.onclick = printForm;
+    bar.appendChild(print);
+  }
+}
+
+// —— PDF Generation ————————————————————————————————————————————————————
+function generatePDF() {
+  showToast('Generating PDF…');
+  setTimeout(() => {
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+
+      const PW = 612, PH = 792;
+      const ML = 36, MR = 36, CW = PW - ML - MR;
+      const NAVY = '#1F3864', STEEL = '#AEC6CF', ICE = '#D6E4F0', GRAY = '#f5f8fb';
+
+      let y = 36;
+
+      function rectFill(x, ry, w, h, color) {
+        doc.setFillColor(color);
+        doc.rect(x, ry, w, h, 'F');
+      }
+
+      function titleBanner() {
+        rectFill(ML, y, CW, 22, NAVY);
+        doc.setTextColor('#ffffff');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.text('PESTICIDE APPLICATION RECORD', PW/2, y + 15, { align: 'center' });
+        y += 22;
+        rectFill(ML, y, CW, 15, STEEL);
+        doc.setTextColor(NAVY);
+        doc.setFontSize(7.5);
+        doc.text('NJ Commercial Pesticide Applicator — Category 7A (General & Household Pest Control)', PW/2, y + 10, { align: 'center' });
+        y += 15;
+        doc.setTextColor('#888888');
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(6.5);
+        doc.text('Required per N.J.A.C. 7:30-6.8  |  Completed within 24 hours of application  |  Retain minimum 3 years', PW/2, y + 9, { align: 'center' });
+        y += 16;
+      }
+
+      function sectionHeader(label) {
+        y += 4;
+        rectFill(ML, y, CW, 13, NAVY);
+        doc.setTextColor('#ffffff');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        doc.text(label, ML + 5, y + 9);
+        y += 13;
+      }
+
+      function labelRow(label, x, ry, w) {
+        rectFill(x, ry, w, 12, ICE);
+        doc.setDrawColor('#999999');
+        doc.setLineWidth(0.4);
+        doc.rect(x, ry, w, 12);
+        doc.setTextColor(NAVY);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.5);
+        doc.text(label, x + 3, ry + 8.5);
+      }
+
+      function valueRow(value, x, ry, w, h=15) {
+        rectFill(x, ry, w, h, '#ffffff');
+        doc.setDrawColor('#cccccc');
+        doc.rect(x, ry, w, h);
+        doc.setTextColor('#111111');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        if (value) doc.text(String(value).substring(0, 70), x + 3, ry + 10);
+      }
+
+      function oneRow(label, value) {
+        labelRow(label, ML, y, CW);
+        y += 12;
+        valueRow(value, ML, y, CW);
+        y += 15;
+      }
+
+      function twoRow(label1, val1, label2, val2) {
+        const hw = CW / 2;
+        labelRow(label1, ML, y, hw);
+        labelRow(label2, ML + hw, y, hw);
+        y += 12;
+        valueRow(val1, ML, y, hw);
+        valueRow(val2, ML + hw, y, hw);
+        y += 15;
+      }
+
+      function threeRow(items) {
+        const tw = CW / 3;
+        items.forEach((it, i) => labelRow(it[0], ML + i*tw, y, tw));
+        y += 12;
+        items.forEach((it, i) => valueRow(it[1], ML + i*tw, y, tw));
+        y += 15;
+      }
+
+      function fourRow(items) {
+        const tw = CW / 4;
+        items.forEach((it, i) => labelRow(it[0], ML + i*tw, y, tw));
+        y += 12;
+        items.forEach((it, i) => valueRow(it[1], ML + i*tw, y, tw));
+        y += 15;
+      }
+
+      function noteText(txt) {
+        doc.setTextColor('#777777');
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(6);
+        doc.text(txt, ML + 2, y + 6);
+        y += 10;
+      }
+
+      function fmtDate(d) {
+        if (!d) return '';
+        const parts = d.split('-');
+        if (parts.length === 3) return `${parts[1]}/${parts[2]}/${parts[0]}`;
+        return d;
+      }
+      function fmtTime(t) {
+        if (!t) return '';
+        const [h, m] = t.split(':');
+        const hr = parseInt(h);
+        return `${hr > 12 ? hr-12 : (hr||12)}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
+      }
+      function fmtDT(dt) {
+        if (!dt) return '';
+        const [d, t] = dt.split('T');
+        return fmtDate(d) + (t ? ' ' + fmtTime(t) : '');
+      }
+
+      // BUILD PDF
+      titleBanner();
+
+      sectionHeader('SECTION 1 — APPLICATOR INFORMATION');
+      twoRow('Business / Company Name', get('business_name'), 'NJ Pesticide Applicator License #', get('license_number'));
+      twoRow('Applicator Full Name', get('applicator_name'), 'Applicator License # (if different)', get('applicator_license'));
+      twoRow('Operator / Handler Full Name (if applicable)', get('operator_name'), 'Handler Card Number', get('handler_card'));
+
+      sectionHeader('SECTION 2 — APPLICATION SITE');
+      oneRow('Customer / Site Name', get('site_name'));
+      oneRow('Site Address', get('site_address'));
+      twoRow('Type of Site', get('site_type'), 'Target Area / Location', get('target_area'));
+
+      sectionHeader('SECTION 3 — APPLICATION DATE & TIME');
+      threeRow([
+        ['Date of Application', fmtDate(get('app_date'))],
+        ['Time Application Completed', fmtTime(get('app_time'))],
+        ['REI End Date / Time', fmtDT(get('rei_end'))],
+      ]);
+      noteText('* Time and REI end are required when the pesticide label specifies a Re-Entry Interval.');
+
+      sectionHeader('SECTION 4 — PESTICIDE(S) USED');
+      // table header
+      const cols = [['Brand / Trade Name', 130], ['Active Ingredient(s)', 105], ['EPA Reg. #', 80], ['Mix Rate (label)', 90], ['Total Used', CW-405]];
+      let cx = ML;
+      cols.forEach(([lbl, w]) => { labelRow(lbl, cx, y, w); cx += w; });
+      y += 12;
+
+      for (let r = 1; r <= 3; r++) {
+        cx = ML;
+        const vals = [get(`p${r}_brand`), get(`p${r}_ai`), get(`p${r}_epa`), get(`p${r}_mix`), get(`p${r}_amt`)];
+        cols.forEach(([, w], i) => { valueRow(vals[i], cx, y, w); cx += w; });
+        y += 15;
+      }
+      noteText('EPA Reg. Number format: XXXXX-XXXX  |  Mix rate / recipe must match label requirements');
+
+      sectionHeader('SECTION 5 — APPLICATION METHOD & EQUIPMENT');
+      threeRow([
+        ['Application Method', get('app_method')],
+        ['Equipment Used', get('equipment')],
+        ['Total Mix Volume Prepared', get('mix_volume')],
+      ]);
+
+      sectionHeader('SECTION 6 — TARGET PEST(S)');
+      twoRow('Target Pest(s)', get('target_pests'), 'Severity / Level of Infestation', get('infestation_level'));
+
+      sectionHeader('SECTION 7 — CONDITIONS AT TIME OF APPLICATION');
+      fourRow([
+        ['Temperature (°F)', get('temperature')],
+        ['Wind Speed / Direction', get('wind')],
+        ['Weather Conditions', get('weather')],
+        ['Indoor / Outdoor', get('indoor_outdoor')],
+      ]);
+
+      sectionHeader('SECTION 8 — NOTIFICATIONS & SPECIAL CONDITIONS');
+      twoRow('Customer notified prior to application?', get('customer_notified'), 'Notification Method & Date', get('notification_method'));
+      twoRow('Posting / Signage placed?', get('signage_placed'), 'Posting Location', get('posting_location'));
+      // special notes
+      labelRow('Special Conditions, Sensitivities, or Notes', ML, y, CW);
+      y += 12;
+      const noteH = 28;
+      rectFill(ML, y, CW, noteH, '#ffffff');
+      doc.setDrawColor('#cccccc');
+      doc.rect(ML, y, CW, noteH);
+      doc.setTextColor('#111111');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      if (get('special_notes')) {
+        const lines = doc.splitTextToSize(get('special_notes'), CW - 6);
+        doc.text(lines.slice(0, 3), ML + 3, y + 9);
+      }
+      y += noteH;
+
+      sectionHeader('SECTION 9 — CERTIFICATION');
+      y += 4;
+      doc.setTextColor('#333333');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.text('I certify that the above information is accurate and that this application was made in compliance with N.J.A.C. 7:30 and all applicable pesticide label requirements.', ML + 2, y + 7, { maxWidth: CW - 4 });
+      y += 16;
+      twoRow('Applicator Signature', '', 'Date Signed', fmtDate(get('date_signed')));
+
+      // Footer
+      y = PH - 26;
+      doc.setDrawColor('#aaaaaa');
+      doc.setLineWidth(0.5);
+      doc.line(ML, y, ML + CW, y);
+      doc.setTextColor('#999999');
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(6.5);
+      doc.text('Records must be maintained for a minimum of 3 years and provided to NJDEP upon request  |  N.J.A.C. 7:30-6.8', PW/2, y + 10, { align: 'center' });
+
+      const sitePart = get('site_name') ? '_' + get('site_name').replace(/[^a-z0-9]/gi,'_').substring(0,20) : '';
+      const datePart = get('app_date') ? '_' + get('app_date') : '';
+      doc.save(`NJ_Pesticide_Record${sitePart}${datePart}.pdf`);
+      showToast('PDF downloaded!');
+    } catch(e) {
+      showToast('Error generating PDF: ' + e.message);
+      console.error(e);
+    }
+  }, 100);
+}
+
+function printForm() {
+  generatePDF();
+  showToast('PDF downloaded — open and print from there');
+}
+
+// —— Init ———————————————————————————————————————————————————————————
+buildNav();
+buildAllSections();
+buildBottomBar();
+updateProgress();
+
+// Pre-fill today's date
+if (!formData.app_date) {
+  const today = new Date().toISOString().split('T')[0];
+  formData.app_date = today;
+  const el = document.getElementById('app_date');
+  if (el) { el.value = today; el.classList.add('filled'); }
+}
+</script>
+</body>
+</html>
