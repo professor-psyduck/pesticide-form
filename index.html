@@ -244,7 +244,8 @@
     bottom: 0; left: 0; right: 0;
     background: white;
     border-top: 1.5px solid var(--border);
-    padding: 12px 16px;
+    padding: 14px 16px;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
     display: flex;
     gap: 10px;
     max-width: 600px;
@@ -252,29 +253,36 @@
     left: 50%;
     transform: translateX(-50%);
     width: 100%;
-    box-shadow: 0 -4px 20px rgba(31,56,100,0.10);
+    box-shadow: 0 -4px 20px rgba(31,56,100,0.12);
   }
 
   .btn {
-    flex: 1;
-    padding: 13px 10px;
-    border-radius: 9px;
+    padding: 14px 18px;
+    border-radius: 10px;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 600;
     font-family: 'DM Sans', sans-serif;
     border: none;
     cursor: pointer;
     transition: all 0.18s;
     letter-spacing: 0.01em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
   }
-  .btn-outline {
-    background: var(--ice-dim);
+  .btn-back {
+    flex: 0 0 auto;
+    background: transparent;
     color: var(--navy);
-    border: 1.5px solid var(--border);
+    padding: 14px 14px;
+    font-weight: 500;
   }
-  .btn-outline:active { background: var(--ice); }
+  .btn-back:active { color: var(--navy-light); }
 
   .btn-primary {
+    flex: 1;
     background: var(--navy);
     color: white;
     box-shadow: 0 3px 10px rgba(31,56,100,0.25);
@@ -282,11 +290,27 @@
   .btn-primary:active { background: var(--navy-light); transform: scale(0.98); }
 
   .btn-success {
+    flex: 1;
     background: var(--success);
     color: white;
     box-shadow: 0 3px 10px rgba(45,125,70,0.25);
   }
   .btn-success:active { transform: scale(0.98); }
+
+  .btn-secondary {
+    flex: 0 0 auto;
+    background: var(--ice-dim);
+    color: var(--navy);
+    border: 1.5px solid var(--border);
+    padding: 14px 16px;
+  }
+  .btn-secondary:active { background: var(--ice); }
+
+  .btn-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
 
   /* —— Toast —— */
   .toast {
@@ -679,14 +703,24 @@ function goTo(i) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function svgIcon(path, cls) {
+  return `<svg class="btn-icon ${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+}
+const ICONS = {
+  back: '<polyline points="15 18 9 12 15 6"/>',
+  next: '<polyline points="9 6 15 12 9 18"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  print: '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+};
+
 function buildBottomBar() {
   const bar = document.getElementById('bottomBar');
   bar.innerHTML = '';
 
   if (currentStep > 0) {
     const back = document.createElement('button');
-    back.className = 'btn btn-outline';
-    back.textContent = '← Back';
+    back.className = 'btn btn-back';
+    back.innerHTML = svgIcon(ICONS.back) + ' Back';
     back.onclick = () => goTo(currentStep - 1);
     bar.appendChild(back);
   }
@@ -694,19 +728,19 @@ function buildBottomBar() {
   if (currentStep < STEPS.length - 1) {
     const next = document.createElement('button');
     next.className = 'btn btn-primary';
-    next.textContent = 'Next →';
+    next.innerHTML = 'Next ' + svgIcon(ICONS.next);
     next.onclick = () => goTo(currentStep + 1);
     bar.appendChild(next);
   } else {
     const dl = document.createElement('button');
     dl.className = 'btn btn-success';
-    dl.textContent = '⬇ Download PDF';
+    dl.innerHTML = svgIcon(ICONS.download) + ' Download PDF';
     dl.onclick = generatePDF;
     bar.appendChild(dl);
 
     const print = document.createElement('button');
-    print.className = 'btn btn-primary';
-    print.textContent = '🖨 Print';
+    print.className = 'btn btn-secondary';
+    print.innerHTML = svgIcon(ICONS.print) + ' Print';
     print.onclick = printForm;
     bar.appendChild(print);
   }
